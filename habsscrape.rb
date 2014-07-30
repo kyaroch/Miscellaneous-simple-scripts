@@ -11,6 +11,7 @@ end
 
 BASE_URL = "http://lcweb2.loc.gov/service/pnp/habshaer/"
 BLOG_URL = "americanbuildings.tumblr.com"
+PHOTO_LOG = File.dirname(__FILE__) + "/photos.txt"
 
 def get_photo_link(base_url)
   current_url = base_url
@@ -33,8 +34,8 @@ def get_photo_link(base_url)
   high_res_jpgs = photo_page.css('a').map { |a| a['href']}.select { |a| /pv\.jpg$/ =~ a }
   unless high_res_jpgs.empty?
     photo_link = current_url + high_res_jpgs.sample
-    if File.exists?('photos.txt')
-      used_photos = IO.readlines('photos.txt').map { |line| line.chomp }
+    if File.exists?(PHOTO_LOG)
+      used_photos = IO.readlines(PHOTO_LOG).map { |line| line.chomp }
       return false if used_photos.include? photo_link
     end
     return photo_link
@@ -73,7 +74,7 @@ end
       response = post_to_tumblr(metadata)
       puts "#{Time.now}: #{response} #{photo_link}"
       if response["id"]
-        File.open('photos.txt', 'a') do |file|
+        File.open(PHOTO_LOG, 'a') do |file|
           file.puts photo_link
         end
         break
