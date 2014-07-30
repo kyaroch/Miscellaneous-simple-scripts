@@ -71,11 +71,11 @@ end
     metadata = get_metadata(photo_link) if photo_link
     if metadata
       response = post_to_tumblr(metadata)
+      puts "#{Time.now}: #{response} #{photo_link}"
       if response["id"]
         File.open('photos.txt', 'a') do |file|
           file.puts photo_link
         end
-        puts "#{Time.now}: #{response} #{photo_link}"
         break
       end
     end  
