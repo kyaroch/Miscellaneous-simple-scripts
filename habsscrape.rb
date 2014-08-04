@@ -14,7 +14,7 @@ BLOG_URL = "americanbuildings.tumblr.com"
 PHOTO_LOG = File.dirname(__FILE__) + "/photos.txt"
 
 def get_photo_link(base_url)
-  current_url = base_url
+  current_url = base_url.dup
   5.times do
     #Walk the directory tree randomly until photos folder is found - should be <5 levels
     current_page = Nokogiri::HTML(open(current_url))
@@ -31,7 +31,7 @@ def get_photo_link(base_url)
   end
   sleep(10)
   photo_page = Nokogiri::HTML(open(current_url))
-  high_res_jpgs = photo_page.css('a').map { |a| a['href']}.select { |a| /pv\.jpg$/ =~ a }
+  high_res_jpgs = photo_page.css('a').map { |a| a['href'] }.select { |a| /pv\.jpg$/ =~ a }
   unless high_res_jpgs.empty?
     photo_link = current_url + high_res_jpgs.sample
     if File.exists?(PHOTO_LOG)
