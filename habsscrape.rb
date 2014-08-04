@@ -92,5 +92,6 @@ end
     STDERR.puts "#{Time.now}: with #{photo_link}, #{metadata}, #{response}:"
     STDERR.puts err.message
     STDERR.puts err.backtrace
+    break
   end
 end
