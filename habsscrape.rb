@@ -23,7 +23,7 @@ def get_photo_link(base_url)
       current_url << 'photos/'
       break
     elsif dir_links.include? 'data/' || dir_links.empty?
-      return false
+      raise OpenURI::HTTPError, "Couldn't find photos directory for #{current_page}"
     else
       current_url << dir_links.sample
     end
@@ -32,22 +32,29 @@ def get_photo_link(base_url)
   sleep(10)
   photo_page = Nokogiri::HTML(open(current_url))
   high_res_jpgs = photo_page.css('a').map { |a| a['href'] }.select { |a| /pv\.jpg$/ =~ a }
-  unless high_res_jpgs.empty?
+  if high_res_jpgs.empty?
+    raise OpenURI::HTTPError, "No suitable images in #{current_page}"
+  else
     photo_link = current_url + high_res_jpgs.sample
     if File.exists?(PHOTO_LOG)
       used_photos = IO.readlines(PHOTO_LOG).map { |line| line.chomp }
-      return false if used_photos.include? photo_link
+      if used_photos.include? photo_link
+        #This probably isn't the right kind of exception to use
+        raise OpenURI::HTTPError, "Used #{photo_link} already"
+      end
     end
-    return photo_link
+    photo_link
   end
-  false
 end
 
 def get_metadata(photo_url)
   data_url_fields = /\/(\w*)\/(\w*)\/(\d*)pv\.jpg$/.match(photo_url)
   data_url = "http://www.loc.gov/pictures/collection/hh/item/#{data_url_fields[1]}.#{data_url_fields[2]}.#{data_url_fields[3]}p/"
-  data_page = Nokogiri::HTML(open(data_url))
-  return false unless data_page
+  begin
+    data_page = Nokogiri::HTML(open(data_url))
+  rescue
+    raise OpenURI::HTTPError, "Couldn't open #{data_url}"
+  end
   data_title = data_page.title.gsub(/[\t\r\n]/, '').strip
   until ("a".."z").include?(data_title.downcase[0]) || data_title.empty?
     data_title.slice!(0)
@@ -69,17 +76,18 @@ end
   begin
     sleep(10)
     photo_link = get_photo_link(BASE_URL)
-    metadata = get_metadata(photo_link) if photo_link
-    if metadata
-      response = post_to_tumblr(metadata)
-      puts "#{Time.now}: #{response} #{photo_link}"
-      if response["id"]
-        File.open(PHOTO_LOG, 'a') do |file|
-          file.puts photo_link
-        end
-        break
+    metadata = get_metadata(photo_link)
+    response = post_to_tumblr(metadata)
+    puts "#{Time.now}: #{response} #{photo_link}"
+    if response["id"]
+      File.open(PHOTO_LOG, 'a') do |file|
+        file.puts photo_link
       end
-    end  
+      break
+    end
+  rescue OpenURI::HTTPError => err
+    STDERR.puts err.message
+    next
   rescue => err
     STDERR.puts "#{Time.now}: with #{photo_link}, #{metadata}, #{response}:"
     STDERR.puts err.message
