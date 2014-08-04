@@ -74,7 +74,6 @@ end
 
 5.times do #Format is not 100% consistent; this may take multiple tries
   begin
-    sleep(10)
     photo_link = get_photo_link(BASE_URL)
     metadata = get_metadata(photo_link)
     response = post_to_tumblr(metadata)
@@ -87,7 +86,7 @@ end
     end
   rescue OpenURI::HTTPError => err
     STDERR.puts err.message
-    next
+    sleep(10)
   rescue => err
     STDERR.puts "#{Time.now}: with #{photo_link}, #{metadata}, #{response}:"
     STDERR.puts err.message
