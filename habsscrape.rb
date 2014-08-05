@@ -26,7 +26,7 @@ def get_photo_link(base_url)
       current_url << 'photos/'
       break
     elsif dir_links.include? 'data/' || dir_links.empty?
-      raise UnsuitableURLError, "Couldn't find photos directory for #{current_page}"
+      raise UnsuitableURLError, "Couldn't find photos directory for #{current_url}"
     else
       current_url << dir_links.sample
     end
@@ -36,7 +36,7 @@ def get_photo_link(base_url)
   photo_page = Nokogiri::HTML(open(current_url))
   high_res_jpgs = photo_page.css('a').map { |a| a['href'] }.select { |a| /pv\.jpg$/ =~ a }
   if high_res_jpgs.empty?
-    raise UnsuitableURLError, "No suitable images in #{current_page}"
+    raise UnsuitableURLError, "No suitable images in #{current_url}"
   else
     photo_link = current_url + high_res_jpgs.sample
     if File.exists?(PHOTO_LOG)
@@ -83,7 +83,7 @@ end
       break
     end
   rescue OpenURI::HTTPError, UnsuitableURLError => err
-    STDERR.puts err.message
+    STDERR.puts "#{Time.now}: err.message"
     sleep(10)
   rescue => err
     STDERR.puts "#{Time.now}: with #{photo_link}, #{metadata}, #{response}:"
