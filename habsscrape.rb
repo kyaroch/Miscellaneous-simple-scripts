@@ -9,6 +9,9 @@ Tumblr.configure do |config|
   config.oauth_token_secret = OAUTH_TOKEN_SECRET
 end
 
+class UnsuitableURLError < StandardError
+end 
+
 BASE_URL = "http://lcweb2.loc.gov/service/pnp/habshaer/"
 BLOG_URL = "americanbuildings.tumblr.com"
 PHOTO_LOG = File.dirname(__FILE__) + "/photos.txt"
@@ -23,7 +26,7 @@ def get_photo_link(base_url)
       current_url << 'photos/'
       break
     elsif dir_links.include? 'data/' || dir_links.empty?
-      raise OpenURI::HTTPError, "Couldn't find photos directory for #{current_page}"
+      raise UnsuitableURLError, "Couldn't find photos directory for #{current_page}"
     else
       current_url << dir_links.sample
     end
@@ -33,14 +36,13 @@ def get_photo_link(base_url)
   photo_page = Nokogiri::HTML(open(current_url))
   high_res_jpgs = photo_page.css('a').map { |a| a['href'] }.select { |a| /pv\.jpg$/ =~ a }
   if high_res_jpgs.empty?
-    raise OpenURI::HTTPError, "No suitable images in #{current_page}"
+    raise UnsuitableURLError, "No suitable images in #{current_page}"
   else
     photo_link = current_url + high_res_jpgs.sample
     if File.exists?(PHOTO_LOG)
       used_photos = IO.readlines(PHOTO_LOG).map { |line| line.chomp }
       if used_photos.include? photo_link
-        #This probably isn't the right kind of exception to use
-        raise OpenURI::HTTPError, "Used #{photo_link} already"
+        raise UnsuitableURLError, "Used #{photo_link} already"
       end
     end
     photo_link
@@ -50,11 +52,7 @@ end
 def get_metadata(photo_url)
   data_url_fields = /\/(\w*)\/(\w*)\/(\d*)pv\.jpg$/.match(photo_url)
   data_url = "http://www.loc.gov/pictures/collection/hh/item/#{data_url_fields[1]}.#{data_url_fields[2]}.#{data_url_fields[3]}p/"
-  begin
-    data_page = Nokogiri::HTML(open(data_url))
-  rescue
-    raise OpenURI::HTTPError, "Couldn't open #{data_url}"
-  end
+  data_page = Nokogiri::HTML(open(data_url))
   data_title = data_page.title.gsub(/[\t\r\n]/, '').strip
   until ("a".."z").include?(data_title.downcase[0]) || data_title.empty?
     data_title.slice!(0)
@@ -84,7 +82,7 @@ end
       end
       break
     end
-  rescue OpenURI::HTTPError => err
+  rescue OpenURI::HTTPError, UnsuitableURLError => err
     STDERR.puts err.message
     sleep(10)
   rescue => err
