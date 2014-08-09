@@ -83,7 +83,7 @@ end
       break
     end
   rescue OpenURI::HTTPError, UnsuitableURLError => err
-    STDERR.puts "#{Time.now}: err.message"
+    STDERR.puts "#{Time.now}: #{err.message}"
     sleep(10)
   rescue => err
     STDERR.puts "#{Time.now}: with #{photo_link}, #{metadata}, #{response}:"
